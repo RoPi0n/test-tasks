@@ -1,7 +1,8 @@
-package org.mash;
+package org.test;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 interface Job {
@@ -47,10 +48,26 @@ public class SchedulerImpl implements Scheduler, Runnable {
 
     @Override
     public void waitAll() {
-        synchronized (this.threads) {
-            for (Thread T : this.threads) {
+        boolean need_check = true;
+
+        while(need_check) {
+            synchronized (this.threads) {
+                for (Thread T : this.threads) {
+                    try {
+                        T.join();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+
+            synchronized (this.jobs_queue) {
+                need_check = this.jobs_queue.size() > 0;
+            }
+
+            if (need_check) {
                 try {
-                    T.join();
+                    Thread.sleep(10);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -86,7 +103,7 @@ public class SchedulerImpl implements Scheduler, Runnable {
         );
 
         for (Job job : jobs_list) {
-            schedule(job);
+            this.schedule(job);
         }
     }
 
